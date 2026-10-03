@@ -80,12 +80,22 @@ const speakToggle = document.getElementById('speakToggle');
 const statusEl = document.getElementById('status');
 const counter = document.getElementById('counter');
 
-let sessionId = localStorage.getItem('nova_session') || crypto.randomUUID();
+// crypto.randomUUID only exists on localhost/HTTPS; fall back so the page also works via http://<LAN-IP>:5000
+const uuid = () => (window.crypto && crypto.randomUUID)
+  ? crypto.randomUUID()
+  : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+let sessionId = localStorage.getItem('nova_session') || uuid();
 localStorage.setItem('nova_session', sessionId);
 let busy = false, speakOn = false;
 
-marked.setOptions({breaks: true});
-const render = md => DOMPurify.sanitize(marked.parse(md));
+// If the CDN libraries are blocked/offline, fall back to safe plain text so chat still works.
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+if (window.marked) marked.setOptions({breaks: true});
+const render = md => (window.marked && window.DOMPurify)
+  ? DOMPurify.sanitize(marked.parse(md))
+  : '<p>' + esc(md).replace(/\n/g, '<br>') + '</p>';
 
 function welcome(){
   chat.innerHTML = `<div class="welcome" id="welcome"><h2>👋 Hi, I'm Nova</h2><p>Ask me about coding, AI, or anything tech.</p>
@@ -172,7 +182,7 @@ async function send(){
 async function clearChat(){
   if(busy) return;
   await fetch('/api/clear', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_id:sessionId})}).catch(()=>{});
-  sessionId = crypto.randomUUID(); localStorage.setItem('nova_session', sessionId);
+  sessionId = uuid(); localStorage.setItem('nova_session', sessionId);
   speechSynthesis?.cancel(); welcome(); statusEl.textContent = 'Chat cleared';
 }
 
