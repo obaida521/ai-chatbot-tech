@@ -79,5 +79,4 @@ History is stored in memory; for multiple servers use Redis or a database.
 | XSS risk from rendered Markdown | DOMPurify |
 | Provider lock-in | OpenAI-compatible client + env config |
 
-## Screenshots / Demo
-Add your screenshots to a `screenshots/` folder and link them here.
+
